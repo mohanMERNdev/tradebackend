@@ -6,7 +6,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Fetch all Buy Pending Orders
 app.get('/buy_pending_orders', (req, res) => {
   db.all('SELECT * FROM buy_pending_orders', [], (err, rows) => {
     if (err) {
@@ -17,7 +16,6 @@ app.get('/buy_pending_orders', (req, res) => {
   });
 });
 
-// Fetch all Sell Pending Orders
 app.get('/sell_pending_orders', (req, res) => {
   db.all('SELECT * FROM sell_pending_orders', [], (err, rows) => {
     if (err) {
@@ -28,7 +26,6 @@ app.get('/sell_pending_orders', (req, res) => {
   });
 });
 
-// Fetch all Completed Orders
 app.get('/completed_orders', (req, res) => {
   db.all('SELECT * FROM completed_orders', [], (err, rows) => {
     if (err) {
@@ -39,32 +36,24 @@ app.get('/completed_orders', (req, res) => {
   });
 });
 
-// Place a Buy Order
 app.post('/buy', (req, res) => {
   const { price, quantity } = req.body;
 
   db.get('SELECT * FROM sell_pending_orders WHERE price = ?', [price], (err, matchingSellOrder) => {
       if (matchingSellOrder) {
           if (matchingSellOrder.quantity > quantity) {
-              // Partial match: reduce the sell order quantity
               db.run('UPDATE sell_pending_orders SET quantity = quantity - ? WHERE id = ?', [quantity, matchingSellOrder.id]);
-              // Move the executed quantity to completed orders
               db.run('INSERT INTO completed_orders (price, quantity, type) VALUES (?, ?, "buy")', [price, quantity]);
           } else if (matchingSellOrder.quantity < quantity) {
-              // Partial match: reduce the buy order quantity
               db.run('UPDATE buy_pending_orders SET quantity = quantity - ? WHERE price = ?', [matchingSellOrder.quantity, price]);
-              // Move the executed quantity to completed orders
               db.run('INSERT INTO completed_orders (price, quantity, type) VALUES (?, ?, "buy")', [price, matchingSellOrder.quantity]);
-              // Delete the fully matched sell order
               db.run('DELETE FROM sell_pending_orders WHERE id = ?', [matchingSellOrder.id]);
           } else {
-              // Exact match: move both orders to completed
               db.run('INSERT INTO completed_orders (price, quantity, type) VALUES (?, ?, "buy")', [price, quantity]);
               db.run('DELETE FROM sell_pending_orders WHERE id = ?', [matchingSellOrder.id]);
           }
           res.send('Buy order matched and processed successfully');
       } else {
-          // No match found: Insert a new buy order
           db.run('INSERT INTO buy_pending_orders (price, quantity) VALUES (?, ?)', [price, quantity], (err) => {
               if (err) return res.status(400).json({ error: err.message });
               res.send('Buy order placed successfully');
@@ -73,26 +62,19 @@ app.post('/buy', (req, res) => {
   });
 });
 
-// API to place a sell order
 app.post('/sell', (req, res) => {
   const { price, quantity } = req.body;
 
   db.get('SELECT * FROM buy_pending_orders WHERE price = ?', [price], (err, matchingBuyOrder) => {
       if (matchingBuyOrder) {
           if (matchingBuyOrder.quantity > quantity) {
-              // Partial match: reduce the buy order quantity
               db.run('UPDATE buy_pending_orders SET quantity = quantity - ? WHERE id = ?', [quantity, matchingBuyOrder.id]);
-              // Move the executed quantity to completed orders
               db.run('INSERT INTO completed_orders (price, quantity, type) VALUES (?, ?, "sell")', [price, quantity]);
           } else if (matchingBuyOrder.quantity < quantity) {
-              // Partial match: reduce the sell order quantity
               db.run('UPDATE sell_pending_orders SET quantity = quantity - ? WHERE price = ?', [matchingBuyOrder.quantity, price]);
-              // Move the executed quantity to completed orders
               db.run('INSERT INTO completed_orders (price, quantity, type) VALUES (?, ?, "sell")', [price, matchingBuyOrder.quantity]);
-              // Delete the fully matched buy order
               db.run('DELETE FROM buy_pending_orders WHERE id = ?', [matchingBuyOrder.id]);
           } else {
-              // Exact match: move both orders to completed
               db.run('INSERT INTO completed_orders (price, quantity, type) VALUES (?, ?, "sell")', [price, quantity]);
               db.run('DELETE FROM buy_pending_orders WHERE id = ?', [matchingBuyOrder.id]);
           }
