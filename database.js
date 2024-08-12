@@ -2,7 +2,6 @@ const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('./trading.db');
 
 db.serialize(() => {
-  // Create Buy Pending Orders table
   db.run(`CREATE TABLE IF NOT EXISTS buy_pending_orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     price INTEGER,
@@ -10,7 +9,6 @@ db.serialize(() => {
     type TEXT DEFAULT 'buy'
   )`);
 
-  // Create Sell Pending Orders table
   db.run(`CREATE TABLE IF NOT EXISTS sell_pending_orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     price INTEGER,
@@ -18,7 +16,6 @@ db.serialize(() => {
     type TEXT DEFAULT 'sell'
   )`);
 
-  // Create Completed Orders table
   db.run(`CREATE TABLE IF NOT EXISTS completed_orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     price INTEGER,
@@ -26,7 +23,6 @@ db.serialize(() => {
     type TEXT
   )`);
 
-  // Insert Dummy Data for Buy Pending Orders
   db.run(`INSERT INTO buy_pending_orders (price, quantity) VALUES (84, 10)`);
   db.run(`INSERT INTO buy_pending_orders (price, quantity) VALUES (83, 20)`);
   db.run(`INSERT INTO buy_pending_orders (price, quantity) VALUES (82, 15)`);
